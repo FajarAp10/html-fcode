@@ -1086,15 +1086,13 @@ document.getElementById("deleteFileBtn").onclick = async() => {
     }
   }
 }
-// WELCOME MESSAGE + LAST FOLDER POPUP
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    showAlert("Selamat Datang di F CODE", 
-      "Editor gratis yang mudah di gunakan untuk membuat website, terdapat template yang dapat kamu gunakan.",
-      checkLastFolderPrompt // callback setelah klik OK
-    );
-  }, 500);
 
+// WELCOME MESSAGE
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    showAlert("Selamat Datang di F CODE","Editor gratis yang mudah di gunakan untuk membuat website, terdapat template yang dapat kamu gunakan.");
+  },500);
+  
   // Mobile touch improvements
   if ('ontouchstart' in window) {
     document.querySelectorAll('button').forEach(btn => {
@@ -1106,12 +1104,13 @@ window.addEventListener('load', () => {
       });
     });
   }
-
+  
   // Auto-refresh preview saat save
   const originalSaveFile = saveFile;
   saveFile = async function() {
     const result = await originalSaveFile.apply(this, arguments);
     if(result && currentFileHandle && currentFileHandle.name.endsWith('.html')) {
+      // Jika sedang di preview mode, refresh
       if(previewPage.style.display === 'flex') {
         runBtn.click();
       }
@@ -1119,82 +1118,6 @@ window.addEventListener('load', () => {
     return result;
   };
 });
-
-// --- MODIFIKASI showAlert agar bisa callback ---
-function showAlert(title, msg, callback) {
-  document.getElementById("alertTitle").innerText = title;
-  document.getElementById("alertMsg").innerText = msg;
-  const alertBox = document.getElementById("alertBox");
-  alertBox.style.display = "flex";
-
-  const btn = alertBox.querySelector(".alertBtn");
-
-  // Hapus listener lama
-  const newBtn = btn.cloneNode(true);
-  btn.parentNode.replaceChild(newBtn, btn);
-
-  newBtn.onclick = () => {
-    alertBox.style.display = "none";
-    if (callback) callback();
-  };
-}
-
-// --- POPUP KONFIRMASI FOLDER TERAKHIR ---
-function showConfirm(title, msg, onYes, onNo) {
-  const box = document.createElement("div");
-  box.className = "alertCard"; // pakai class yang sama untuk animasi
-  box.style.textAlign = "center";
-  box.innerHTML = `
-    <h3>${title}</h3>
-    <p>${msg.replace(/\n/g, "<br>")}</p>
-    <div style="margin-top:16px; display:flex; gap:8px; justify-content:center;">
-      <button style="flex:1;padding:12px;border:none;border-radius:10px;background:var(--accent);color:white;cursor:pointer;" id="yesBtn">Ya</button>
-      <button style="flex:1;padding:12px;border:none;border-radius:10px;background:#444;color:white;cursor:pointer;" id="noBtn">Tidak</button>
-    </div>
-  `;
-  const overlay = document.getElementById("alertBox");
-  overlay.innerHTML = '';
-  overlay.appendChild(box);
-  overlay.style.display = "flex";
-
-  document.getElementById("yesBtn").onclick = () => {
-    overlay.style.display = "none";
-    onYes && onYes();
-  };
-  document.getElementById("noBtn").onclick = () => {
-    overlay.style.display = "none";
-    onNo && onNo();
-  };
-}
-
-// --- CEK FOLDER TERAKHIR DI LOCALSTORAGE ---
-function checkLastFolderPrompt() {
-  const lastFolder = localStorage.getItem("lastFolderName");
-  if (!lastFolder) return;
-
-  showConfirm(
-    "Buka Folder Terakhir?",
-    `Folder terakhir yang dibuka:\n"${lastFolder}"\n\nMau buka lagi?`,
-    async () => {
-      try {
-        const folder = await window.showDirectoryPicker();
-        localStorage.setItem("lastFolderName", folder.name);
-        folderBtn.textContent = "📁 " + folder.name;
-        closeFolderBtn.style.display = "inline-block";
-        folderHandle = folder;
-        fileCache.clear();
-        loadFiles();
-        showAlert("Berhasil", `Folder "${folder.name}" dibuka kembali.`);
-      } catch(e) {
-        showAlert("Dibatalkan", "Folder tidak dibuka.");
-      }
-    },
-    () => {
-      console.log("User memilih tidak membuka folder terakhir.");
-    }
-  );
-}
-
 </script>
 </body>
 </html>
