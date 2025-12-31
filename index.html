@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>F CODE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+
+<style>
+:root {
+  --bg:#1e1e1e; --panel:#252526; --accent:#1f8fff; --text:#eee; --danger:#ff4d4d;
+}
+* { box-sizing:border-box; font-family:system-ui,Segoe UI,sans-serif }
+html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;}
+#topbar{height:50px;background:var(--panel);display:flex;justify-content:space-between;align-items:center;padding:0 10px;border-bottom:1px solid #333;color:white;position:sticky;top:0;z-index:100;}
+.leftBar{display:flex;align-items:center;gap:10px}
+#menuBtn{background:none;border:none;color:white;font-size:24px;cursor:pointer;padding:8px;min-height:44px;min-width:44px;}
+.rightBar{display:flex;gap:4px;}
+.rightBar button{background:none;color:white;border:none;font-size:22px;cursor:pointer;padding:8px;min-height:44px;min-width:44px;}
+#editorPage{height:calc(100vh - 50px)}
+#editor{height:100%;width:100%}
+#previewPage{display:none;height:100vh;flex-direction:column;background:white;position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000;}
+#previewHeader{height:50px;background:var(--accent);color:white;display:flex;justify-content:space-between;align-items:center;padding:0 12px;}
+#previewHeader button{background:white;color:var(--accent);border:none;padding:10px 16px;border-radius:8px;font-weight:600;min-height:40px;}
+#previewFrame{flex:1;border:none;background:white;}
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:.25s;z-index:998;}
+#overlay.show{opacity:1;pointer-events:auto}
+#hamburgerMenu{position:fixed;top:0;left:-270px;width:260px;height:100%;background:#1b1b1b;padding:14px;transition:.3s;z-index:999;box-shadow:6px 0 20px rgba(0,0,0,.4);overflow-y:auto;}
+#hamburgerMenu.show{left:0}
+#hamburgerMenu h3{margin:6px 0 10px;color:white;font-size:18px;}
+#folderHeader{display:flex;gap:6px;margin-bottom:10px;}
+#folderBtn{flex:1;padding:12px;border:none;border-radius:8px;background:#2d2d2d;color:white;cursor:pointer;min-height:44px;}
+#closeFolderBtn{padding:12px;border:none;border-radius:8px;background:#444;color:white;cursor:pointer;display:none;min-height:44px;min-width:44px;}
+#newFileBtn{width:100%;padding:12px;margin-bottom:10px;background:#2d2d2d;border:none;border-radius:8px;color:white;cursor:pointer;min-height:44px;}
+#fileList div{padding:12px;border-radius:6px;cursor:pointer;color:white;display:flex;justify-content:space-between;align-items:center;background:#252525;margin-bottom:4px;min-height:44px;}
+#fileList div:hover{background:#2f2f2f;}
+#fileList div.active{background:#2a5caa;}
+.fileMenuBtn{background:none;border:none;color:#aaa;font-size:20px;cursor:pointer;padding:6px;min-height:36px;min-width:36px;}
+.fileMenuPopup{position:absolute;background:#1f1f1f;border:1px solid #333;border-radius:8px;padding:8px;display:none;flex-direction:column;z-index:999;min-width:140px;}
+.fileMenuPopup button{background:none;border:none;color:white;text-align:left;padding:10px 12px;cursor:pointer;border-radius:6px;min-height:40px;}
+.fileMenuPopup button:hover{background:#333;}
+#templateModal,#newFileModal,#editFileModal,#tutorialModal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:1000;}
+.modalBox{width:min(90%,380px);background:#1f1f1f;border-radius:16px;padding:16px;color:white;animation:popup .25s ease;}
+@keyframes popup{from{transform:scale(.9);opacity:0} to{transform:scale(1);opacity:1}}
+.modalBox h3{margin:0 0 12px;font-size:18px;}
+.modalBox input{width:100%;padding:12px;margin-bottom:12px;background:#2a2a2a;border:1px solid #444;border-radius:8px;color:white;font-size:16px;}
+.modalBox input:focus{outline:none;border-color:var(--accent);}
+.templateCloseBtn{margin-top:8px;width:100%;padding:12px;border:none;border-radius:10px;background:#333;color:white;cursor:pointer;min-height:44px;}
+.templateCloseBtn:hover{background:#444;}
+.templateCloseBtn.primary{background:var(--accent);font-weight:600;}
+#alertBox{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:2000;background:rgba(0,0,0,.55);}
+.alertCard{width:min(90%,360px);background:#1f1f1f;color:white;border-radius:16px;padding:20px;animation:popup .2s ease;text-align:center;}
+.alertCard h3{margin:0 0 8px;font-size:18px;}
+.alertCard p{font-size:14px;opacity:.9;line-height:1.4;}
+.alertBtn{margin-top:16px;padding:12px;width:100%;border:none;border-radius:10px;background:var(--accent);color:white;cursor:pointer;min-height:44px;}
+#templateList {margin-top:10px; display:flex; flex-direction:column; gap:6px; max-height:400px; overflow-y:auto;}
+#templateList div{padding:12px;border-radius:8px;cursor:pointer;background:#2a2a2a;color:white;transition:background .2s;min-height:44px;}
+#templateList div:hover{background:#3a3a3a;}
+#templateList div:active{background:#2a5caa;}
+#templateMode {display:flex; gap:6px; margin-bottom:10px;}
+#templateMode button {flex:1; padding:12px; border:none; border-radius:8px; background:#2a2a2a; color:white; cursor:pointer;min-height:44px;}
+#templateMode button:hover {background:#3a3a3a;}
+#templateMode button.active {background:var(--accent);}
+
+/* MOBILE OPTIMIZATION */
+@media screen and (max-width: 768px) {
+  #editor {
+    font-size: 13px !important;
+  }
+  #topbar {
+    padding: 0 8px;
+  }
+  #menuBtn {
+    font-size: 26px;
+  }
+  .rightBar button {
+    font-size: 20px;
+    padding: 10px;
+  }
+  .modalBox {
+    width: min(95%, 360px);
+    padding: 14px;
+  }
+  #hamburgerMenu {
+    width: 280px;
+    padding: 16px 12px;
+  }
+}
+
+/* VERY SMALL PHONES */
+@media screen and (max-width: 375px) {
+  #editor {
+    font-size: 12px !important;
+  }
+  .leftBar span {
+    font-size: 16px;
+  }
+  .rightBar {
+    gap: 2px;
+  }
+  .rightBar button {
+    font-size: 18px;
+    padding: 6px;
+  }
+  #previewHeader button {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+}
+
+/* TOUCH FRIENDLY */
+@media (hover: none) and (pointer: coarse) {
+  button, [role="button"], input {
+    min-height: 44px !important;
+  }
+  
+  #editor {
+    font-size: 14px !important;
+    line-height: 1.5;
+  }
+  
+  input, textarea {
+    font-size: 16px !important;
+  }
+  
+  /* Touch feedback */
+  button:active {
+    opacity: 0.8;
+    transform: scale(0.98);
+  }
+}
+
+/* SAFARI FIX */
+@supports (-webkit-touch-callout: none) {
+  #hamburgerMenu {
+    padding-bottom: 40px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ALERT -->
+<div id="alertBox"><div class="alertCard"><h3 id="alertTitle">Info</h3><p id="alertMsg"></p><button class="alertBtn" onclick="closeAlert()">OK</button></div></div>
+
+<div id="editorPage">
+  <div id="topbar">
+    <div class="leftBar">
+      <button id="menuBtn">☰</button>
+      <span style="font-size: 18px; font-weight: 700; color: #1f8fff;">F CODE</span>
+    </div>
+    <div class="rightBar">
+      <button id="templateBtn">📦</button>
+      <button id="saveBtn">💾</button>
+      <button id="runBtn">▶</button>
+      <button id="tutorialBtn">❔</button>
+    </div>
+  </div>
+  <div id="editor"></div>
+</div>
+
+<div id="previewPage">
+  <div id="previewHeader">
+    <span>Live Preview</span>
+    <button id="backBtn">← Back</button>
+  </div>
+  <iframe id="previewFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+</div>
+
+<div id="overlay"></div>
+
+<div id="hamburgerMenu">
+<h3>📁 Project</h3>
+<div id="folderHeader"><button id="folderBtn">📂 Open Folder</button><button id="closeFolderBtn">✕</button></div>
+<button id="newFileBtn">➕ New File</button>
+<div id="fileList"></div>
+</div>
+
+<!-- NEW FILE MODAL -->
+<div id="newFileModal"><div class="modalBox"><h3>Buat File Baru</h3>
+<input type="text" id="newFileName" placeholder="Nama file">
+<button id="createFileBtn" class="templateCloseBtn primary">Buat File</button>
+<button class="templateCloseBtn" onclick="closeNewFileModal()">Batal</button>
+</div></div>
+
+<!-- EDIT FILE MODAL -->
+<div id="editFileModal"><div class="modalBox"><h3>Edit File</h3>
+<input type="text" id="editFileName">
+<button id="renameFileBtn" class="templateCloseBtn primary">Ganti Nama</button>
+<button id="deleteFileBtn" class="templateCloseBtn" style="background:#ff4d4d;">Hapus File</button>
+<button class="templateCloseBtn" onclick="closeEditFileModal()">Batal</button>
+</div></div>
+
+<!-- TEMPLATE MODAL -->
+<div id="templateModal"><div class="modalBox">
+<h3>Pilih Template</h3>
+<div id="templateMode">
+  <button id="dasarMode" class="active">📄 Dasar</button>
+  <button id="fullstackMode">🚀 FullStack</button>
+</div>
+<div id="templateList"></div>
+<button class="templateCloseBtn" onclick="closeTemplate()">Batal</button>
+</div></div>
+
+<!-- TUTORIAL MODAL -->
+<div id="tutorialModal"><div class="modalBox">
+<h3>Tutorial F CODE</h3>
+<p>1. Klik ikon 📂 untuk buka folder project.</p>
+<p>2. Klik ➕ untuk buat file baru.</p>
+<p>3. Pilih file untuk edit di editor.</p>
+<p>4. Tekan ! + Enter untuk generate template HTML.</p>
+<p>5. Klik 💾 untuk save dan Klik ▶ untuk preview</p>
+<p>6. Gunakan ❔ untuk lihat tutorial kapan saja.</p>
+<button class="templateCloseBtn" onclick="closeTutorial()">Tutup</button>
+</div></div>
+
+<script>
+
+const API_BASE = "https://fcode.zeabur.app";
+
+
+/* ALERT */
+function showAlert(title,msg){
+  document.getElementById("alertTitle").innerText=title;
+  document.getElementById("alertMsg").innerText=msg;
+  document.getElementById("alertBox").style.display="flex";
+}
+function closeAlert(){
+  document.getElementById("alertBox").style.display="none";
+}
+
+/* STATE */
+let editor, folderHandle=null, currentFileHandle=null, lastSavedContent="", editTargetDiv=null;
+let currentTemplateMode = 'dasar';
+let fileCache = new Map();
+let previewCurrentFile = null; // File yang sedang ditampilkan di preview
+
+/* MONACO */
+require.config({ paths:{ vs:"https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs" }});
+require(["vs/editor/editor.main"],()=>{
+  editor = monaco.editor.create(document.getElementById("editor"), {
+    value: "",
+    language: "html",
+    theme: "vs-dark",
+    automaticLayout: true,
+    fontSize: 14,
+    minimap: { enabled: true },
+    scrollBeyondLastLine: false,
+    wordWrap: "on",
+    formatOnPaste: true,
+    formatOnType: true,
+    lineHeight: 1.6
+  });
+
+  // RESPONSIVE FONT UNTUK MOBILE
+  function adjustEditorFont(){
+    if(window.innerWidth <= 480){
+      editor.updateOptions({ fontSize: 12, minimap: { enabled: false } });
+    } else if(window.innerWidth <= 768){
+      editor.updateOptions({ fontSize: 13, minimap: { enabled: false } });
+    } else {
+      editor.updateOptions({ fontSize: 14, minimap: { enabled: true } });
+    }
+  }
+  adjustEditorFont();
+  window.addEventListener("resize", adjustEditorFont);
+
+  // DETEKSI ENTER
+  editor.onKeyDown(e => {
+    if(e.keyCode === monaco.KeyCode.Enter){
+      const value = editor.getValue();
+      if(value.endsWith("!")){
+        editor.setValue(`<!DOCTYPE html>
+<html lang="id"> 
+<head>
+    <meta charset="UTF-8">
+    <title>Judul Halaman Anda</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <h1>Selamat Datang</h1>
+    <p>Halaman web pertama saya.</p>
+</body>
+</html>`);
+      }
+    }
+  });
+});
+
+/* MENU */
+menuBtn.onclick=()=>{
+  hamburgerMenu.classList.add("show");
+  overlay.classList.add("show");
+}
+overlay.onclick=()=>{
+  hamburgerMenu.classList.remove("show");
+  overlay.classList.remove("show");
+}
+
+/* OPEN/CLOSE FOLDER */
+folderBtn.onclick=async()=>{
+  try{
+    folderHandle=await window.showDirectoryPicker();
+    folderBtn.textContent="📁 "+folderHandle.name;
+    closeFolderBtn.style.display="inline-block";
+    fileCache.clear();
+    loadFiles();
+  }catch{}
+}
+closeFolderBtn.onclick=()=>{
+  folderHandle=null;
+  currentFileHandle=null;
+  lastSavedContent="";
+  fileList.innerHTML="";
+  editor.setValue("");
+  fileCache.clear();
+  folderBtn.textContent="📂 Open Folder";
+  closeFolderBtn.style.display="none";
+  hamburgerMenu.classList.remove("show");
+  overlay.classList.remove("show");
+}
+
+/* NEW FILE */
+newFileBtn.onclick=()=>{
+  if(!folderHandle){
+    showAlert("Folder Belum Dibuka","Buka folder dulu sebelum membuat file baru.");
+    return;
+  }
+  document.getElementById("newFileModal").style.display="flex";
+  document.getElementById("newFileName").value="";
+  setTimeout(() => document.getElementById("newFileName").focus(), 100);
+}
+function closeNewFileModal(){
+  document.getElementById("newFileModal").style.display="none";
+}
+document.getElementById("createFileBtn").onclick=async()=>{
+  const fileName=document.getElementById("newFileName").value.trim();
+  if(!fileName){
+    showAlert("Nama Kosong","Masukkan nama file!");
+    return;
+  }
+  try{
+    const newFileHandle=await folderHandle.getFileHandle(fileName,{create:true});
+    currentFileHandle=newFileHandle;
+    editor.setValue("");
+    lastSavedContent="";
+    
+    // AUTO TAMBAH HTML JIKA .html
+    if(fileName.endsWith('.html')){
+      editor.setValue(`<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dokument</title>
+</head>
+<body>
+    <h1>Halo Dunia!</h1>
+</body>
+</html>`);
+    } else if(fileName.endsWith('.css')){
+      editor.setValue(`/* ${fileName} */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+}
+`);
+    } else if(fileName.endsWith('.js')){
+      editor.setValue(`// ${fileName}
+console.log('Hello from ${fileName}');
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Document loaded');
+});
+`);
+    }
+    
+    addFileToList(newFileHandle,fileName);
+    closeNewFileModal();
+    hamburgerMenu.classList.remove("show");
+    overlay.classList.remove("show");
+    showAlert("Berhasil",`File "${fileName}" berhasil dibuat.`);
+  }catch(err){
+    showAlert("Error","Gagal membuat file: "+err.message);
+  }
+}
+
+/* LOAD FILES */
+async function loadFiles(){
+  fileList.innerHTML="";
+  fileCache.clear();
+  for await(const [name,handle] of folderHandle.entries()){
+    if(handle.kind==="file"){
+      addFileToList(handle,name);
+    }
+  }
+}
+
+/* FUNGSI UNTUK MENGAMBIL FILE DARI CACHE ATAU FOLDER */
+async function getFileContent(fileHandle) {
+  const name = fileHandle.name;
+  if (fileCache.has(name)) {
+    return fileCache.get(name);
+  }
+  
+  try {
+    const file = await fileHandle.getFile();
+    const content = await file.text();
+    fileCache.set(name, content);
+    return content;
+  } catch(err) {
+    console.error("Error reading file:", err);
+    throw err;
+  }
+}
+
+/* FUNGSI UNTUK MENCARI FILE DI FOLDER */
+async function findFileInFolder(filename) {
+  for await (const [name, handle] of folderHandle.entries()) {
+    if (handle.kind === "file" && name === filename) {
+      try {
+        const content = await getFileContent(handle);
+        return { handle, content };
+      } catch(err) {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
+/* FUNGSI UNTUK MENGUBAH BLOB KE DATA URL */
+function blobToDataUrl(blob) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+}
+
+function addFileToList(handle,name){
+  const div=document.createElement("div"); 
+  div.style.position="relative";
+  const span=document.createElement("span"); 
+  
+  // ICON BERDASARKAN EKSTENSI
+  let icon = '📄';
+  if(name.endsWith('.html')) icon = '🌐';
+  if(name.endsWith('.css')) icon = '🎨';
+  if(name.endsWith('.js')) icon = '⚡';
+  if(name.endsWith('.json')) icon = '📋';
+  if(name.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)) icon = '🖼️';
+  if(name.endsWith('.txt') || name.endsWith('.md')) icon = '📝';
+  
+  span.textContent=icon + " " + name; 
+  div.appendChild(span);
+  
+  const btn=document.createElement("button"); 
+  btn.textContent="⋮"; 
+  btn.className="fileMenuBtn"; 
+  div.appendChild(btn);
+  
+  const menu=document.createElement("div"); 
+  menu.className="fileMenuPopup"; 
+  menu.style.display="none";
+  
+  const renameBtn=document.createElement("button"); 
+  renameBtn.textContent="Ganti Nama"; 
+  menu.appendChild(renameBtn);
+  
+  const deleteBtn=document.createElement("button"); 
+  deleteBtn.textContent="Hapus File"; 
+  menu.appendChild(deleteBtn);
+  
+  div.appendChild(menu);
+
+  btn.onclick=(e)=>{
+    e.stopPropagation();
+    document.querySelectorAll(".fileMenuPopup").forEach(m=>{
+      if(m!==menu) m.style.display="none";
+    });
+    menu.style.display=menu.style.display==="flex"?"none":"flex";
+    menu.style.top="36px";
+    menu.style.right="8px";
+    menu.style.position="absolute";
+  }
+  
+  div.onclick=async(e)=>{
+    if(e.target!==btn && !e.target.closest('.fileMenuPopup')){
+      // Remove active class from all
+      document.querySelectorAll("#fileList div").forEach(d => d.classList.remove("active"));
+      // Add active to clicked
+      div.classList.add("active");
+      
+      currentFileHandle=handle;
+      try {
+        const content = await getFileContent(handle);
+        editor.setValue(content);
+        lastSavedContent=content;
+        
+        // SET LANGUAGE UNTUK EDITOR - FIXED VERSION
+        const model = editor.getModel();
+        if (model && monaco && monaco.editor) {
+          if(name.endsWith('.html')) {
+            monaco.editor.setModelLanguage(model, 'html');
+          } else if(name.endsWith('.css')) {
+            monaco.editor.setModelLanguage(model, 'css');
+          } else if(name.endsWith('.js')) {
+            monaco.editor.setModelLanguage(model, 'javascript');
+          } else if(name.endsWith('.json')) {
+            monaco.editor.setModelLanguage(model, 'json');
+          } else {
+            monaco.editor.setModelLanguage(model, 'plaintext');
+          }
+        }
+        
+      } catch(err) {
+        editor.setValue(`// Error membaca file: ${err.message}\n// File: ${name}`);
+        const model = editor.getModel();
+        if (model && monaco && monaco.editor) {
+          monaco.editor.setModelLanguage(model, 'plaintext');
+        }
+      }
+      
+      hamburgerMenu.classList.remove("show");
+      overlay.classList.remove("show");
+      menu.style.display="none";
+    }
+  }
+  
+  renameBtn.onclick=()=>openEditFileModal(div,handle);
+  deleteBtn.onclick=async()=>{
+    if(confirm(`Yakin hapus file "${name}"?`)){
+      try{
+        await folderHandle.removeEntry(handle.name);
+        fileList.removeChild(div);
+        fileCache.delete(name);
+        if(currentFileHandle===handle){
+          editor.setValue("");
+          currentFileHandle=null;
+          lastSavedContent="";
+        }
+        showAlert("Berhasil","File dihapus");
+      }catch(err){
+        showAlert("Error","Gagal hapus file: "+err.message);
+      }
+    }
+  }
+  
+  fileList.appendChild(div);
+}
+
+// Close menus when clicking elsewhere
+document.addEventListener("click",(e)=>{
+  if(!e.target.closest('.fileMenuBtn') && !e.target.closest('.fileMenuPopup')){
+    document.querySelectorAll(".fileMenuPopup").forEach(m=>m.style.display="none");
+  }
+});
+
+/* SAVE */
+async function saveFile(){
+  if(!currentFileHandle){
+    showAlert("Belum ada file","Pilih file dulu sebelum menyimpan.");
+    return false;
+  }
+  const content=editor.getValue();
+  try{
+    const writable=await currentFileHandle.createWritable();
+    await writable.write(content);
+    await writable.close();
+    lastSavedContent=content;
+    fileCache.set(currentFileHandle.name, content);
+    showAlert("Berhasil","File berhasil disimpan.");
+    return true;
+  }catch(err){
+    showAlert("Error","Gagal menyimpan file: "+err.message);
+    return false;
+  }
+}
+saveBtn.onclick=saveFile;
+
+/* AUTO SAVE CTRL+S */
+document.addEventListener('keydown',(e)=>{
+  if((e.ctrlKey || e.metaKey) && e.key === 's'){
+    e.preventDefault();
+    saveFile();
+  }
+});
+
+/* RUN - PREVIEW DENGAN FILE EKSTERNAL YANG TERHUBUNG */
+runBtn.onclick=async()=>{
+  if(!currentFileHandle){
+    showAlert("Tidak bisa dijalankan","Pilih file HTML terlebih dahulu.");
+    return;
+  }
+  
+  const fileName = currentFileHandle.name;
+  if(!fileName.endsWith('.html')){
+    showAlert("Bukan file HTML","Hanya file HTML yang bisa di-preview.");
+    return;
+  }
+  
+  // SIMPAN DULU SEBELUM PREVIEW
+  if(editor.getValue()!==lastSavedContent){
+    const saved = await saveFile();
+    if(!saved) return;
+  }
+  
+  try {
+    // Set file yang akan dipreview
+    previewCurrentFile = currentFileHandle;
+    
+    // Ambil konten HTML
+    let htmlContent = await getFileContent(currentFileHandle);
+    
+    // Proses HTML untuk preview
+    htmlContent = await processHtmlForPreview(htmlContent);
+    
+    // Tampilkan preview
+    editorPage.style.display="none";
+    previewPage.style.display="flex";
+    previewFrame.srcdoc = htmlContent;
+    
+    // Setup event listener untuk iframe
+    setTimeout(setupPreviewNavigation, 500);
+    
+  } catch(err) {
+    showAlert("Error","Gagal membuat preview: "+err.message);
+  }
+}
+
+/* FUNGSI UNTUK MEMPROSES HTML UNTUK PREVIEW */
+async function processHtmlForPreview(htmlContent) {
+  let processedHtml = htmlContent;
+  
+  // 1. Cari dan embed CSS external
+  const cssRegex = /<link[^>]*href="([^"#?]+\.css)"[^>]*>/gi;
+  const cssMatches = [...processedHtml.matchAll(cssRegex)];
+  
+  for (const match of cssMatches) {
+    const fullMatch = match[0];
+    const cssFile = match[1];
+    
+    try {
+      const fileData = await findFileInFolder(cssFile);
+      if (fileData) {
+        // Ganti link dengan style tag embedded
+        const styleTag = `<style>\n${fileData.content}\n</style>`;
+        processedHtml = processedHtml.replace(fullMatch, styleTag);
+      }
+    } catch(e) {
+      console.log(`CSS file not found: ${cssFile}`);
+    }
+  }
+  
+  // 2. Cari dan embed JS external (kecuali yang dari CDN)
+  const jsRegex = /<script[^>]*src="([^"#?]+\.js)"[^>]*><\/script>/gi;
+  const jsMatches = [...processedHtml.matchAll(jsRegex)];
+  
+  for (const match of jsMatches) {
+    const fullMatch = match[0];
+    const jsFile = match[1];
+    
+    // Skip CDN links
+    if (jsFile.startsWith('http://') || jsFile.startsWith('https://') || jsFile.startsWith('//')) {
+      continue;
+    }
+    
+    try {
+      const fileData = await findFileInFolder(jsFile);
+      if (fileData) {
+        // Ganti script external dengan embedded
+        const scriptTag = `<script>\n${fileData.content}\n<\/script>`;
+        processedHtml = processedHtml.replace(fullMatch, scriptTag);
+      }
+    } catch(e) {
+      console.log(`JS file not found: ${jsFile}`);
+    }
+  }
+  
+  // 3. Cari dan convert gambar ke Data URL
+  const imgRegex = /<(img|image)[^>]*src="([^"#?]+\.(jpg|jpeg|png|gif|svg|webp))"[^>]*>/gi;
+  const imgMatches = [...processedHtml.matchAll(imgRegex)];
+  
+  for (const match of imgMatches) {
+    const fullMatch = match[0];
+    const imgFile = match[2];
+    
+    try {
+      const fileData = await findFileInFolder(imgFile);
+      if (fileData) {
+        // Untuk gambar, kita perlu baca sebagai blob
+        const file = await fileData.handle.getFile();
+        const blob = file;
+        const dataUrl = await blobToDataUrl(blob);
+        // Ganti src dengan Data URL
+        const newImgTag = fullMatch.replace(`src="${imgFile}"`, `src="${dataUrl}"`);
+        processedHtml = processedHtml.replace(fullMatch, newImgTag);
+      }
+    } catch(e) {
+      console.log(`Image file not found: ${imgFile}`);
+    }
+  }
+  
+  // 4. Tambahkan JavaScript untuk handle navigation dalam preview
+  processedHtml += `
+<script>
+// Function untuk handle navigation ke file lain dalam PREVIEW
+function navigateToFileInPreview(filename) {
+  if (window.parent && window.parent.switchPreviewFile) {
+    window.parent.switchPreviewFile(filename);
+  }
+}
+
+// Handle semua link dan button
+document.addEventListener('DOMContentLoaded', function() {
+  // 1. Handle anchor links
+  const links = document.querySelectorAll('a[href]');
+  links.forEach(link => {
+    const href = link.getAttribute('href');
+    
+    // Skip jika bukan file HTML lokal
+    if (!href || 
+        href.startsWith('http://') || 
+        href.startsWith('https://') || 
+        href.startsWith('//') || 
+        href.startsWith('#') || 
+        href.startsWith('mailto:') || 
+        href.startsWith('tel:') || 
+        href.startsWith('javascript:')) {
+      return;
+    }
+    
+    // Cek jika file HTML/HTM
+    if (href.endsWith('.html') || href.endsWith('.htm')) {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        navigateToFileInPreview(href);
+      });
+    }
+  });
+  
+  // 2. Handle buttons with onclick location.href
+  const buttons = document.querySelectorAll('button, input[type="button"]');
+  buttons.forEach(button => {
+    const onclick = button.getAttribute('onclick');
+    if (onclick) {
+      // Cari location.href='file.html'
+      const hrefMatch = onclick.match(/location\.href\s*=\s*['"]([^'"]+)['"]/);
+      if (hrefMatch) {
+        const href = hrefMatch[1];
+        if (href.endsWith('.html') || href.endsWith('.htm')) {
+          button.addEventListener('click', function(e) {
+            e.preventDefault();
+            navigateToFileInPreview(href);
+          });
+        }
+      }
+      
+      // Cari window.location.href='file.html'
+      const windowMatch = onclick.match(/window\.location\.href\s*=\s*['"]([^'"]+)['"]/);
+      if (windowMatch) {
+        const href = windowMatch[1];
+        if (href.endsWith('.html') || href.endsWith('.htm')) {
+          button.addEventListener('click', function(e) {
+            e.preventDefault();
+            navigateToFileInPreview(href);
+          });
+        }
+      }
+    }
+  });
+  
+  // 3. Handle form actions
+  const forms = document.querySelectorAll('form[action]');
+  forms.forEach(form => {
+    const action = form.getAttribute('action');
+    if (action && (action.endsWith('.html') || action.endsWith('.htm'))) {
+      if (!action.startsWith('http://') && !action.startsWith('https://') && !action.startsWith('//')) {
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          // Collect form data
+          const formData = new FormData(form);
+          const data = {};
+          for (let [key, value] of formData.entries()) {
+            data[key] = value;
+          }
+          
+          // Store form data temporarily
+          sessionStorage.setItem('formData_' + action, JSON.stringify(data));
+          
+          // Navigate
+          navigateToFileInPreview(action);
+        });
+      }
+    }
+  });
+});
+
+// Load form data if exists
+window.addEventListener('load', function() {
+  const currentFile = window.location.pathname.split('/').pop() || 'index.html';
+  const savedData = sessionStorage.getItem('formData_' + currentFile);
+  if (savedData) {
+    try {
+      const data = JSON.parse(savedData);
+      const form = document.querySelector('form');
+      if (form) {
+        // Fill form with saved data
+        for (const [key, value] of Object.entries(data)) {
+          const input = form.querySelector('[name="' + key + '"]');
+          if (input) {
+            input.value = value;
+          }
+        }
+        // Remove saved data
+        sessionStorage.removeItem('formData_' + currentFile);
+      }
+    } catch(e) {
+      console.error('Error loading form data:', e);
+    }
+  }
+});
+<\/script>`;
+  
+  return processedHtml;
+}
+
+/* FUNGSI UNTUK SWITCH PREVIEW KE FILE LAIN */
+async function switchPreviewFile(filename) {
+  try {
+    console.log('Switching preview to:', filename);
+    
+    // Cari file di folder
+    let foundFile = null;
+    for await (const [name, handle] of folderHandle.entries()) {
+      if (handle.kind === "file" && name.toLowerCase() === filename.toLowerCase()) {
+        foundFile = handle;
+        break;
+      }
+    }
+    
+    // Fallback: cari case-insensitive
+    if (!foundFile) {
+      for await (const [name, handle] of folderHandle.entries()) {
+        if (handle.kind === "file" && name.includes(filename)) {
+          foundFile = handle;
+          break;
+        }
+      }
+    }
+    
+    if (!foundFile) {
+      showAlert("File Tidak Ditemukan", `File "${filename}" tidak ditemukan dalam folder.`);
+      return;
+    }
+    
+    // Update file yang sedang dipreview
+    previewCurrentFile = foundFile;
+    
+    // Ambil konten HTML
+    let htmlContent = await getFileContent(foundFile);
+    
+    // Proses HTML untuk preview
+    htmlContent = await processHtmlForPreview(htmlContent);
+    
+    // Update iframe
+    previewFrame.srcdoc = htmlContent;
+    
+    // Setup event listener lagi
+    setTimeout(setupPreviewNavigation, 500);
+    
+  } catch(err) {
+    showAlert("Error", "Gagal beralih ke file: " + err.message);
+  }
+}
+
+// Expose function ke window untuk dipanggil dari iframe
+window.switchPreviewFile = switchPreviewFile;
+
+/* SETUP PREVIEW NAVIGATION */
+function setupPreviewNavigation() {
+  try {
+    if (!previewFrame.contentWindow) return;
+    
+    // Inject navigation handler ke iframe
+    previewFrame.contentWindow.switchPreviewFile = switchPreviewFile;
+    
+  } catch(e) {
+    console.log("Error setting up preview navigation:", e);
+  }
+}
+
+backBtn.onclick=()=>{
+  previewPage.style.display="none";
+  editorPage.style.display="block";
+  // Kembali ke editor dengan file yang sebelumnya diedit (currentFileHandle)
+  // Tidak mengubah file yang sedang diedit
+}
+
+/* TEMPLATE */
+templateBtn.onclick=async()=>{
+  templateModal.style.display="flex";
+  currentTemplateMode = 'dasar';
+  updateTemplateMode();
+  loadTemplatesFromAPI();
+}
+
+function closeTemplate(){
+  templateModal.style.display="none";
+}
+
+// UPDATE MODE BUTTON
+function updateTemplateMode(){
+  const dasarBtn = document.getElementById("dasarMode");
+  const fullstackBtn = document.getElementById("fullstackMode");
+  
+  dasarBtn.classList.toggle("active", currentTemplateMode === 'dasar');
+  fullstackBtn.classList.toggle("active", currentTemplateMode === 'fullstack');
+}
+
+// SWITCH MODE
+document.getElementById("dasarMode").onclick = () => {
+  currentTemplateMode = 'dasar';
+  updateTemplateMode();
+  loadTemplatesFromAPI();
+};
+
+document.getElementById("fullstackMode").onclick = () => {
+  currentTemplateMode = 'fullstack';
+  updateTemplateMode();
+  loadTemplatesFromAPI();
+};
+
+// LOAD TEMPLATE DARI API - VERSI SIMPLE HANYA RENAME
+async function loadTemplatesFromAPI(){
+  const templateList = document.getElementById("templateList");
+  templateList.innerHTML = "<div style='text-align:center;padding:20px;color:#aaa;'>Memuat template...</div>";
+  
+  try{
+    const folder = currentTemplateMode === 'dasar' ? 'Dasar' : 'FullStack';
+    const res = await fetch(`${API_BASE}/api/templates/${folder}`);
+    
+    if(!res.ok){
+      throw new Error(`HTTP ${res.status}`);
+    }
+    
+    const files = await res.json();
+    templateList.innerHTML = "";
+    
+    if(files.length === 0){
+      templateList.innerHTML = "<div style='text-align:center;padding:20px;color:#aaa;'>Tidak ada template ditemukan</div>";
+      return;
+    }
+    
+    // MAP NAMA FILE KE NAMA TAMPILAN
+    const displayNames = {
+      'html.html': '🌐 HTML Dasar',
+      'css.html': '🎨 CSS Template',
+      'javascript.html': '⚡ JavaScript Template',
+      'form.html': '📋 Form Template',
+      'table.html': '📊 Table Template',
+      'media.html': '🖼️ Media Template',
+      'blog.html': '📝 Blog Template',
+      'ecommerce.html': '🛒 E-commerce Template',
+      'kalkulator.html': '🧮 Calculator',
+      'landing.html': '🚀 Landing Page',
+      'portofolio.html': '💼 Portfolio Template'
+    };
+    
+    files.forEach(filename => {
+      const div = document.createElement("div");
+      div.className = "templateItem";
+      
+      // Gunakan nama tampilan atau default ke nama file
+      const displayName = displayNames[filename] || `📄 ${filename}`;
+      
+      div.textContent = displayName;
+      
+      div.onclick = async() => {
+        try{
+          const templateRes = await fetch(`${API_BASE}/api/template/${folder}/${filename}`);
+          if(!templateRes.ok) throw new Error(`HTTP ${templateRes.status}`);
+          const templateContent = await templateRes.text();
+          editor.setValue(templateContent);
+          closeTemplate();
+          showAlert("Template Dimuat", `Template "${displayName}" berhasil dimuat.`);
+        }catch(err){
+          showAlert("Error", "Gagal memuat template: " + err.message);
+        }
+      };
+      templateList.appendChild(div);
+    });
+    
+  }catch(err){
+    console.error("Error loading templates:", err);
+    templateList.innerHTML = "<div style='text-align:center;padding:20px;color:#ff4d4d;'>Error: " + err.message + "</div>";
+  }
+}
+
+/* TUTORIAL */
+tutorialBtn.onclick=()=>{
+  tutorialModal.style.display="flex";
+}
+function closeTutorial(){
+  tutorialModal.style.display="none";
+}
+
+/* EDIT FILE */
+function openEditFileModal(div,handle){
+  editTargetDiv=div;
+  document.getElementById("editFileModal").style.display="flex";
+  document.getElementById("editFileName").value=handle.name;
+  currentFileHandle=handle;
+  setTimeout(() => document.getElementById("editFileName").focus(), 100);
+}
+function closeEditFileModal(){
+  document.getElementById("editFileModal").style.display="none";
+  editTargetDiv=null;
+}
+
+document.getElementById("renameFileBtn").onclick=async()=>{
+  const newName=document.getElementById("editFileName").value.trim();
+  if(!editTargetDiv||!newName){
+    showAlert("Error","Nama kosong");
+    return;
+  }
+  try{
+    const oldHandle=currentFileHandle;
+    const f=await oldHandle.getFile();
+    const content=await f.text();
+    const newHandle=await folderHandle.getFileHandle(newName,{create:true});
+    const w=await newHandle.createWritable();
+    await w.write(content);
+    await w.close();
+    await folderHandle.removeEntry(oldHandle.name);
+    currentFileHandle=newHandle;
+    
+    // Update cache
+    fileCache.delete(oldHandle.name);
+    fileCache.set(newName, content);
+    
+    // UPDATE ICON JIKA EKSTENSI BERUBAH
+    let icon = '📄';
+    if(newName.endsWith('.html')) icon = '🌐';
+    if(newName.endsWith('.css')) icon = '🎨';
+    if(newName.endsWith('.js')) icon = '⚡';
+    if(newName.endsWith('.json')) icon = '📋';
+    if(newName.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i)) icon = '🖼️';
+    if(newName.endsWith('.txt') || newName.endsWith('.md')) icon = '📝';
+    
+    editTargetDiv.querySelector("span").textContent=icon + " " + newName;
+    lastSavedContent=content;
+    closeEditFileModal();
+    showAlert("Berhasil","Nama file diganti");
+  }catch(err){
+    showAlert("Error","Gagal ganti nama: "+err.message);
+  }
+}
+
+// DELETE FILE BUTTON
+document.getElementById("deleteFileBtn").onclick = async() => {
+  if(!currentFileHandle || !editTargetDiv){
+    showAlert("Error","Tidak ada file yang dipilih");
+    return;
+  }
+  
+  if(confirm(`Yakin hapus file "${currentFileHandle.name}"?`)){
+    try{
+      await folderHandle.removeEntry(currentFileHandle.name);
+      fileList.removeChild(editTargetDiv);
+      fileCache.delete(currentFileHandle.name);
+      editor.setValue("");
+      currentFileHandle=null;
+      lastSavedContent="";
+      closeEditFileModal();
+      showAlert("Berhasil","File berhasil dihapus");
+    }catch(err){
+      showAlert("Error","Gagal hapus file: "+err.message);
+    }
+  }
+}
+// WELCOME MESSAGE + LAST FOLDER POPUP
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    showAlert("Selamat Datang di F CODE", 
+      "Editor gratis yang mudah di gunakan untuk membuat website, terdapat template yang dapat kamu gunakan.",
+      checkLastFolderPrompt // callback setelah klik OK
+    );
+  }, 500);
+
+  // Mobile touch improvements
+  if ('ontouchstart' in window) {
+    document.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('touchstart', function() {
+        this.style.opacity = '0.8';
+      });
+      btn.addEventListener('touchend', function() {
+        this.style.opacity = '1';
+      });
+    });
+  }
+
+  // Auto-refresh preview saat save
+  const originalSaveFile = saveFile;
+  saveFile = async function() {
+    const result = await originalSaveFile.apply(this, arguments);
+    if(result && currentFileHandle && currentFileHandle.name.endsWith('.html')) {
+      if(previewPage.style.display === 'flex') {
+        runBtn.click();
+      }
+    }
+    return result;
+  };
+});
+
+// --- MODIFIKASI showAlert agar bisa callback ---
+function showAlert(title, msg, callback) {
+  document.getElementById("alertTitle").innerText = title;
+  document.getElementById("alertMsg").innerText = msg;
+  const alertBox = document.getElementById("alertBox");
+  alertBox.style.display = "flex";
+
+  const btn = alertBox.querySelector(".alertBtn");
+
+  // Hapus listener lama
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+
+  newBtn.onclick = () => {
+    alertBox.style.display = "none";
+    if (callback) callback();
+  };
+}
+
+// --- POPUP KONFIRMASI FOLDER TERAKHIR ---
+function showConfirm(title, msg, onYes, onNo) {
+  const box = document.createElement("div");
+  box.className = "alertCard"; // pakai class yang sama untuk animasi
+  box.style.textAlign = "center";
+  box.innerHTML = `
+    <h3>${title}</h3>
+    <p>${msg.replace(/\n/g, "<br>")}</p>
+    <div style="margin-top:16px; display:flex; gap:8px; justify-content:center;">
+      <button style="flex:1;padding:12px;border:none;border-radius:10px;background:var(--accent);color:white;cursor:pointer;" id="yesBtn">Ya</button>
+      <button style="flex:1;padding:12px;border:none;border-radius:10px;background:#444;color:white;cursor:pointer;" id="noBtn">Tidak</button>
+    </div>
+  `;
+  const overlay = document.getElementById("alertBox");
+  overlay.innerHTML = '';
+  overlay.appendChild(box);
+  overlay.style.display = "flex";
+
+  document.getElementById("yesBtn").onclick = () => {
+    overlay.style.display = "none";
+    onYes && onYes();
+  };
+  document.getElementById("noBtn").onclick = () => {
+    overlay.style.display = "none";
+    onNo && onNo();
+  };
+}
+
+// --- CEK FOLDER TERAKHIR DI LOCALSTORAGE ---
+function checkLastFolderPrompt() {
+  const lastFolder = localStorage.getItem("lastFolderName");
+  if (!lastFolder) return;
+
+  showConfirm(
+    "Buka Folder Terakhir?",
+    `Folder terakhir yang dibuka:\n"${lastFolder}"\n\nMau buka lagi?`,
+    async () => {
+      try {
+        const folder = await window.showDirectoryPicker();
+        localStorage.setItem("lastFolderName", folder.name);
+        folderBtn.textContent = "📁 " + folder.name;
+        closeFolderBtn.style.display = "inline-block";
+        folderHandle = folder;
+        fileCache.clear();
+        loadFiles();
+        showAlert("Berhasil", `Folder "${folder.name}" dibuka kembali.`);
+      } catch(e) {
+        showAlert("Dibatalkan", "Folder tidak dibuka.");
+      }
+    },
+    () => {
+      console.log("User memilih tidak membuka folder terakhir.");
+    }
+  );
+}
+
+</script>
+</body>
+</html>
